@@ -51,4 +51,8 @@ public interface ProductDao {
      */
     @Query("SELECT * FROM products WHERE id = :productId LIMIT 1")
     Product getProductById(int productId);
+
+    // TRUY VẤN MỚI: Tính tổng giá trị tồn kho
+    @Query("SELECT SUM(price * inventory_qty) FROM products")
+    double getTotalInventoryValue();
 }
