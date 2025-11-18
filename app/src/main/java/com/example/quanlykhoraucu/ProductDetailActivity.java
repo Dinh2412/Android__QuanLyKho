@@ -20,14 +20,16 @@ public class ProductDetailActivity extends AppCompatActivity {
     private AppDatabase db;
     private Product currentProduct;
     private int productId = -1;
+    private String currentCategory; // Dùng để lưu trữ category được truyền từ CategoryActivity
 
-    // Khai báo các View (ĐÃ THÊM etCostPrice)
-    private EditText etName, etPrice, etTransQty, etCostPrice;
+    // Khai báo các View (actvCategory đã được loại bỏ)
+    private EditText etName, etPrice, etCostPrice, etTransQty;
     private AutoCompleteTextView actvUnit;
     private TextView tvCurrentQty, tvTitle;
     private Button btnImport, btnExport, btnSave, btnDelete, btnViewHistory;
 
-    private static final String[] UNITS = new String[] {"Kg", "Gram", "Bó", "Củ", "Nải", "Quả"};
+    // Đơn vị gợi ý
+    private static final String[] UNITS = new String[] {"Kg", "Gram", "Bó", "Củ", "Nải", "Quả", "Hộp", "Hũ"};
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,7 +42,7 @@ public class ProductDetailActivity extends AppCompatActivity {
         tvTitle = findViewById(R.id.tv_detail_title);
         etName = findViewById(R.id.et_product_name);
         etPrice = findViewById(R.id.et_price);
-        etCostPrice = findViewById(R.id.et_cost_price); // ÁNH XẠ GIÁ VỐN
+        etCostPrice = findViewById(R.id.et_cost_price);
         etTransQty = findViewById(R.id.et_trans_qty);
         actvUnit = findViewById(R.id.actv_unit);
         tvCurrentQty = findViewById(R.id.tv_current_qty);
@@ -75,12 +77,13 @@ public class ProductDetailActivity extends AppCompatActivity {
             });
 
         } else if (getIntent().hasExtra("CATEGORY_NAME")) {
-            // CHẾ ĐỘ THÊM MỚI
-            String categoryName = getIntent().getStringExtra("CATEGORY_NAME");
-            tvTitle.setText("Thêm Sản Phẩm Mới (" + categoryName + ")");
+            // CHẾ ĐỘ THÊM MỚI (Lấy category từ Intent)
+            currentCategory = getIntent().getStringExtra("CATEGORY_NAME");
+            tvTitle.setText("Thêm Sản Phẩm Mới (" + currentCategory + ")");
 
             // Khởi tạo đối tượng sản phẩm mới: (name, category, unit, price, costPrice, inventoryQty)
-            currentProduct = new Product("", categoryName, "", 0.0, 0.0, 0);
+            // Gán category từ Intent (đã được xác định khi nhấn nút)
+            currentProduct = new Product("", currentCategory, "", 0.0, 0.0, 0);
 
             // Ẩn các chức năng quản lý kho/xóa khi thêm mới
             btnImport.setVisibility(View.GONE);
@@ -95,7 +98,7 @@ public class ProductDetailActivity extends AppCompatActivity {
         }
     }
 
-    // Hàm tải dữ liệu (ĐÃ CẬP NHẬT TẢI GIÁ VỐN)
+    // Hàm tải dữ liệu (Chỉ dùng cho chế độ Xem/Sửa)
     private void loadProductData(int id) {
         currentProduct = db.productDao().getProductById(id);
 
@@ -103,7 +106,7 @@ public class ProductDetailActivity extends AppCompatActivity {
             tvTitle.setText("Quản lý: " + currentProduct.getName());
             etName.setText(currentProduct.getName());
             etPrice.setText(String.valueOf(currentProduct.price));
-            etCostPrice.setText(String.valueOf(currentProduct.costPrice)); // TẢI GIÁ VỐN
+            etCostPrice.setText(String.valueOf(currentProduct.costPrice));
             actvUnit.setText(currentProduct.unit, false);
             updateInventoryDisplay();
         } else {
@@ -119,7 +122,7 @@ public class ProductDetailActivity extends AppCompatActivity {
         }
     }
 
-    // Hàm xử lý Nhập/Xuất Kho (ĐÃ CẬP NHẬT DÙNG GIÁ VỐN/GIÁ BÁN)
+    // Hàm xử lý Nhập/Xuất Kho
     private void performTransaction(boolean isImport) {
         String qtyText = etTransQty.getText().toString();
         if (qtyText.isEmpty()) {
@@ -174,13 +177,13 @@ public class ProductDetailActivity extends AppCompatActivity {
     }
 
 
-    // Hàm Lưu thay đổi hoặc Thêm mới (ĐÃ CẬP NHẬT LƯU GIÁ VỐN)
+    // Hàm Lưu thay đổi hoặc Thêm mới
     private void saveChanges(boolean isNew) {
         // Kiểm tra dữ liệu chung
         String newName = etName.getText().toString();
         String newUnit = actvUnit.getText().toString();
         double newPrice = 0.0;
-        double newCostPrice = 0.0; // Biến mới
+        double newCostPrice = 0.0;
 
         if (newName.isEmpty() || newUnit.isEmpty() || etPrice.getText().toString().isEmpty() || etCostPrice.getText().toString().isEmpty()) {
             Toast.makeText(this, "Vui lòng điền đủ thông tin!", Toast.LENGTH_SHORT).show();
@@ -189,7 +192,7 @@ public class ProductDetailActivity extends AppCompatActivity {
 
         try {
             newPrice = Double.parseDouble(etPrice.getText().toString());
-            newCostPrice = Double.parseDouble(etCostPrice.getText().toString()); // LẤY GIÁ VỐN
+            newCostPrice = Double.parseDouble(etCostPrice.getText().toString());
         } catch (NumberFormatException e) {
             Toast.makeText(this, "Giá bán hoặc Giá vốn không hợp lệ.", Toast.LENGTH_SHORT).show();
             return;
@@ -199,7 +202,8 @@ public class ProductDetailActivity extends AppCompatActivity {
         currentProduct.name = newName;
         currentProduct.unit = newUnit;
         currentProduct.price = newPrice;
-        currentProduct.costPrice = newCostPrice; // CẬP NHẬT GIÁ VỐN
+        currentProduct.costPrice = newCostPrice;
+        // currentProduct.category KHÔNG BỊ CẬP NHẬT (Giữ nguyên giá trị ban đầu từ DB hoặc Intent)
 
         if (isNew) {
             db.productDao().insert(currentProduct);
